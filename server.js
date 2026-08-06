@@ -200,11 +200,15 @@ async function startLlamaServer() {
 
   console.log(`🧠 Başlatılıyor: ${executable} ${args.join(" ")}`);
 
+  // LD_LIBRARY_PATH'yi bin/ dizini olarak ayarla
+  const env = { ...process.env };
+  env.LD_LIBRARY_PATH = binDir + (env.LD_LIBRARY_PATH ? ':' + env.LD_LIBRARY_PATH : '');
+
   llamaProcess = spawn(executable, args, {
-    cwd: binDir,  // Çalışma dizini bin/ – kütüphaneler aynı yerde
+    cwd: binDir,               // Çalışma dizini bin/
     windowsHide: true,
     stdio: ["ignore", "pipe", "pipe"],
-    env: process.env
+    env: env                   // LD_LIBRARY_PATH ile
   });
 
   llamaProcess.stdout.on("data", data => {
