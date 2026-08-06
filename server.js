@@ -199,17 +199,16 @@ async function startLlamaServer() {
 
   console.log(`🧠 Başlatılıyor: ${executable} ${args.join(" ")}`);
 
-  // ==== YENİ EKLENEN KISIM (LD_LIBRARY_PATH) ====
+  // LD_LIBRARY_PATH ayarı (zaten ekli)
   const env = { ...process.env };
   const binPath = path.join(__dirname, "bin");
   env.LD_LIBRARY_PATH = binPath + (env.LD_LIBRARY_PATH ? ':' + env.LD_LIBRARY_PATH : '');
-  // ============================================
 
   llamaProcess = spawn(executable, args, {
     cwd: __dirname,
     windowsHide: true,
     stdio: ["ignore", "pipe", "pipe"],
-    env: env   // ← bu satır eklendi
+    env: env
   });
 
   llamaProcess.stdout.on("data", data => {
