@@ -7,27 +7,15 @@ wget -nv https://github.com/ggml-org/llama.cpp/releases/download/b10290/llama-b1
 echo "📦 Arşiv açılıyor..."
 tar -xzf llama-b10290-bin-ubuntu-x64.tar.gz
 
-echo "📁 Arşiv içeriği (kök dizin):"
-ls -la
+# bin/ dizinini oluştur
+mkdir -p bin
 
-echo "📁 bin/ klasörü içeriği:"
-ls -la bin/ || echo "bin/ klasörü yok!"
+# Kök dizindeki tüm dosyaları (arşivden çıkanlar) bin/ altına taşı
+# (Bu işlem sırasında bin/ dizininin kendisini taşımamaya dikkat ediyoruz)
+find . -maxdepth 1 -type f -exec mv {} bin/ \;
 
-# Eğer llama-server başka bir yerdeyse bulup taşı
-if [ -f "bin/llama-server" ]; then
-    chmod +x bin/llama-server
-    echo "✅ llama-server hazır."
-else
-    echo "❌ bin/llama-server bulunamadı. Tüm dosyalar taranıyor..."
-    find . -name "llama-server" -exec ls -l {} \;
-    # Eğer bulunursa, doğru yere taşı
-    if [ -f "./llama-server" ]; then
-        mkdir -p bin
-        mv ./llama-server bin/
-        chmod +x bin/llama-server
-        echo "✅ llama-server taşındı ve hazır."
-    else
-        echo "❌ llama-server hiçbir yerde bulunamadı. Build başarısız."
-        exit 1
-    fi
-fi
+# Çalıştırılabilir dosyalara yetki ver
+chmod +x bin/llama-server
+chmod +x bin/llama-*   # diğer binary'ler için de
+
+echo "✅ llama-server ve tüm kütüphaneler bin/ dizininde hazır."
