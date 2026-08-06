@@ -147,7 +147,11 @@ async function loadModel() {
       modelPath: MODEL_PATH,
       gpuLayers: 0, // CPU'da çalıştır (Render'da GPU yok)
     });
-    const context = new LlamaContext({ model });
+    const context = new LlamaContext({
+        model,
+        contextSize: 1024,
+        batchSize: 128
+    });
     session = new LlamaChatSession({ context });
     ready = true;
     console.log("✅ Yankı modeli cevap vermeye hazır.");
@@ -176,37 +180,70 @@ app.post("/api/chat", async (req, res) => {
   }
 
   let messages = req.body.messages;
+
   if (!Array.isArray(messages)) {
-    return res.status(400).json({ error: "messages dizisi gönderin." });
+    return res.status(400).json({
+      error: "messages dizisi gönderin.",
+    });
   }
 
-  // Son 6 mesajı al, temizle
   messages = messages
     .slice(-6)
-    .filter((m) => m && ["user", "assistant"].includes(m.role))
+    .filter(
+      (m) =>
+        m &&
+        ["user", "assistant"].includes(m.role) &&
+        String(m.content || "").trim()
+    )
     .map((m) => ({
       role: m.role,
-      content: String(m.content || "").slice(0, 1500),
-    }))
-    .filter((m) => m.content.trim());
+      content: String(m.content).slice(0, 1500),
+    }));
 
   if (!messages.length || messages[messages.length - 1].role !== "user") {
-    return res.status(400).json({ error: "Geçerli bir kullanıcı mesajı gönder." });
+    return res.status(400).json({
+      error: "Geçerli bir kullanıcı mesajı gönder.",
+    });
   }
 
-  const chatHistory = [{ role: "system", content: SYSTEM_PROMPT }, ...messages];
+  const prompt = `${SYSTEM_PROMPT}
+
+${messages
+  .map((m) =>
+    m.role === "user"
+      ? `Kullanıcı: ${m.content}`
+      : `Yankı: ${m.content}`
+  )
+  .join("\n")}
+
+Yankı:`;
 
   try {
-    const response = await session.prompt(chatHistory, {
+    console.log("📨 Prompt:");
+    console.log(prompt);
+
+    console.log("🧠 Model düşünüyor...");
+    console.time("generate");
+    const response = await session.prompt(prompt, {
       maxTokens: MAX_TOKENS,
       temperature: 0.7,
       topP: 0.9,
     });
 
-    res.json({ answer: response });
+    console.timeEnd("generate");
+
+    console.log("✅ Cevap üretildi.");
+
+    res.json({
+      answer: String(response).trim(),
+    });
   } catch (err) {
-    console.error("Sohbet hatası:", err);
-    res.status(500).json({ error: "Yanıt üretilirken hata oluştu." });
+    console.error("❌ Sohbet hatası:");
+    console.error(err);
+
+    res.status(500).json({
+      error: err.message || "Yanıt üretilirken hata oluştu.",
+    });
   }
 });
 
