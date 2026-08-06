@@ -19,12 +19,12 @@ const MAX_TOKENS = Number(process.env.MAX_TOKENS || 256);
 
 const MODEL_DIR = path.join(__dirname, "models");
 // TheBloke dosya adı (küçük harf)
-const MODEL_NAME = "qwen2.5-0.5b-instruct-Q2_K.gguf";
+const MODEL_NAME = "Qwen2.5-0.5B-Instruct-Q2_K.gguf";
 const MODEL_PATH = path.join(MODEL_DIR, MODEL_NAME);
 
 // TheBloke'un resmi GGUF bağlantısı (kararlı)
 const MODEL_URL =
-  "https://huggingface.co/TheBloke/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-Q2_K.gguf";
+  "https://huggingface.co/bartowski/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/Qwen2.5-0.5B-Instruct-Q2_K.gguf";
 
 const SYSTEM_PROMPT = `
 Senin adın Yankı.
