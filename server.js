@@ -18,13 +18,12 @@ const THREADS = Number(process.env.THREADS || 2);
 const MAX_TOKENS = Number(process.env.MAX_TOKENS || 128);
 
 const MODEL_DIR = path.join(__dirname, "models");
-const MODEL_NAME = "tinyllama-1.1b-chat-v1.0.Q2_K.gguf";
+const MODEL_NAME = "qwen2.5-0.5b-instruct-Q2_K.gguf";
 const MODEL_PATH = path.join(MODEL_DIR, MODEL_NAME);
 
 // TinyLlama 1.1B Chat v1.0, Q2_K GGUF.
 const MODEL_URL =
-  process.env.MODEL_URL ||
-  "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q2_K.gguf?download=true";
+  "https://huggingface.co/TheBloke/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-Q2_K.gguf?download=true";
 
 const SYSTEM_PROMPT = `
 Senin adın Yankı.
