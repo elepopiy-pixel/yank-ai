@@ -6,9 +6,8 @@ import path from "path";
 import http from "http";
 import https from "https";
 import { fileURLToPath } from "url";
-import { LlamaModel, LlamaContext, LlamaChatSession } from "node-llama-cpp";
+import { LlamaModel, LlamaChatSession } from "node-llama-cpp";
 
-// __dirname'ı ESM'de kullanmak için
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -41,7 +40,6 @@ let startupError = null;
 app.use(express.json({ limit: "256kb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
-// ─── Model indirme (aynı) ───
 function requestWithRedirect(url, options = {}, redirectCount = 0) {
   return new Promise((resolve, reject) => {
     if (redirectCount > 8) {
@@ -136,27 +134,38 @@ async function downloadModel() {
   console.log("✅ Model indirme tamamlandı.");
 }
 
-// ─── Model yükleme (node-llama-cpp) ───
 async function loadModel() {
   try {
     console.log("🧠 Model yükleniyor (bu 10-20 saniye sürebilir)...");
+    
+    // Doğru kullanım: initialize ile
     const model = new LlamaModel({
       modelPath: MODEL_PATH,
-      gpuLayers: 0, // CPU'da çalıştır (Render'da GPU yok)
+      gpuLayers: 0
     });
-    const context = new LlamaContext({ model });
-    session = new LlamaChatSession({ context });
+    
+    // Modelin yüklenmesini bekle
+    await model.initialize();
+    
+    // Context oluştur
+    const context = await model.createContext();
+    
+    // Session oluştur
+    session = new LlamaChatSession({
+      context: context
+    });
+    
     ready = true;
     console.log("✅ Yankı modeli cevap vermeye hazır.");
   } catch (err) {
     startupError = err.message;
     ready = false;
     console.error("❌ Model yüklenirken hata:", err.message);
+    console.error(err.stack);
     throw err;
   }
 }
 
-// ─── API ───
 app.get("/api/status", (_req, res) => {
   res.json({
     ready,
@@ -177,7 +186,6 @@ app.post("/api/chat", async (req, res) => {
     return res.status(400).json({ error: "messages dizisi gönderin." });
   }
 
-  // Son 6 mesajı al ve temizle
   messages = messages
     .slice(-6)
     .filter(m => m && ["user", "assistant"].includes(m.role))
@@ -191,14 +199,14 @@ app.post("/api/chat", async (req, res) => {
     return res.status(400).json({ error: "Geçerli bir kullanıcı mesajı gönder." });
   }
 
-  // System prompt'u başa ekle
+  // System prompt'u ekle
   const chatHistory = [
     { role: "system", content: SYSTEM_PROMPT },
     ...messages,
   ];
 
   try {
-    // node-llama-cpp ile sohbet
+    // Doğru prompt metodu
     const response = await session.prompt(chatHistory, {
       maxTokens: MAX_TOKENS,
       temperature: 0.7,
@@ -212,7 +220,6 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-// ─── Ana fonksiyon ───
 async function main() {
   app.listen(WEB_PORT, "0.0.0.0", () => {
     console.log(`🌐 YankıAI: http://localhost:${WEB_PORT}`);
