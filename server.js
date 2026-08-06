@@ -150,26 +150,15 @@ async function downloadModel() {
 }
 
 function findLlamaServer() {
-  const isWindows = process.platform === "win32";
-  const executable = isWindows ? "llama-server.exe" : "llama-server";
 
-  const candidates = [
-    process.env.LLAMA_SERVER_PATH,
-    path.join(__dirname, "bin", executable),
-    path.join(__dirname, executable),
-    executable
-  ].filter(Boolean);
+    if (process.env.LLAMA_SERVER_PATH)
+        return process.env.LLAMA_SERVER_PATH;
 
-  for (const candidate of candidates) {
-    if (candidate === executable || fs.existsSync(candidate)) {
-      return candidate;
-    }
-  }
+    if (process.platform === "win32")
+        return path.join(__dirname,"bin","llama-server.exe");
 
-  throw new Error(
-    `${executable} bulunamadı. llama.cpp paketindeki ${executable} dosyasını ` +
-    `"${path.join(__dirname, "bin")}" klasörüne koy.`
-  );
+    return path.join(__dirname,"bin","llama-server");
+
 }
 
 async function waitForLlama() {
