@@ -1,13 +1,14 @@
 {
   "name": "yankiai",
   "version": "1.0.0",
-  "description": "YankıAI – Yerel 0.5B model ile sohbet asistanı",
+  "description": "YankıAI – Yerel 0.5B model ile sohbet asistanı (node-llama-cpp)",
   "main": "server.js",
   "scripts": {
-    "start": "bash start.sh & node server.js"
+    "start": "node server.js"
   },
   "dependencies": {
-    "express": "^4.18.2"
+    "express": "^4.18.2",
+    "node-llama-cpp": "^3.0.0"
   },
   "engines": {
     "node": ">=18"
