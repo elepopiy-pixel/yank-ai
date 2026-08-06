@@ -149,8 +149,6 @@ async function downloadModel() {
   console.log("✅ Model indirme tamamlandı.");
 }
 
-const { spawnSync } = require("child_process");
-
 function findLlamaServer() {
     const isWindows = process.platform === "win32";
     const exe = isWindows ? "llama-server.exe" : "llama-server";
