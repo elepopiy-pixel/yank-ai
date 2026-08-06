@@ -1,2 +1,0 @@
-Windows: llama-server.exe
-Linux: llama-server
