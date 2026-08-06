@@ -199,10 +199,11 @@ async function startLlamaServer() {
 
   console.log(`🧠 Başlatılıyor: ${executable} ${args.join(" ")}`);
 
-  // LD_LIBRARY_PATH ayarı (zaten ekli)
+  // === LD_LIBRARY_PATH ayarı ===
   const env = { ...process.env };
   const binPath = path.join(__dirname, "bin");
   env.LD_LIBRARY_PATH = binPath + (env.LD_LIBRARY_PATH ? ':' + env.LD_LIBRARY_PATH : '');
+  // ============================
 
   llamaProcess = spawn(executable, args, {
     cwd: __dirname,

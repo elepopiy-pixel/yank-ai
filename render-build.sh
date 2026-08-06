@@ -9,15 +9,15 @@ tar -xzf llama-b10290-bin-ubuntu-x64.tar.gz
 
 mkdir -p bin
 
-# Sadece llama ile ilgili dosyaları taşı
+# Tüm llama.cpp dosyalarını bin/ altına taşı (server.js, package.json vs. dokunma)
 mv llama* lib* ggml* mtmd* bin/ 2>/dev/null || true
 
-# Tüm eksik kütüphane linklerini oluştur
+# Eksik linkleri oluştur (zorla)
 cd bin
 if [ -f libggml.so.0.18.1 ]; then
     ln -sf libggml.so.0.18.1 libggml.so.0
-    ln -sf libggml.so.0.18.1 libggml-base.so.0      # ← YENİ
-    ln -sf libggml.so.0.18.1 libggml-cpu.so.0       # ← YENİ (olası)
+    ln -sf libggml.so.0.18.1 libggml-base.so.0
+    ln -sf libggml.so.0.18.1 libggml-cpu.so.0
 fi
 
 if [ -f libllama-common.so.0.0.10290 ]; then
