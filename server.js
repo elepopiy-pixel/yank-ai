@@ -6,9 +6,9 @@ import path from "path";
 import http from "http";
 import https from "https";
 import { fileURLToPath } from "url";
-import { DonutRuntime } from "@uncharted-ai/donut-runtime";
+import { LlamaModel, LlamaContext, LlamaChatSession } from "node-llama-cpp";
 
-// __dirname'ı ESM'de kullanmak için
+// __dirname ESM uyumluluğu
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -18,11 +18,13 @@ const WEB_PORT = Number(process.env.PORT || 3000);
 const MAX_TOKENS = Number(process.env.MAX_TOKENS || 256);
 
 const MODEL_DIR = path.join(__dirname, "models");
-const MODEL_NAME = "Qwen2.5-0.5B-Instruct-Q2_K.gguf";
+// TheBloke dosya adı (küçük harf)
+const MODEL_NAME = "qwen2.5-0.5b-instruct-Q2_K.gguf";
 const MODEL_PATH = path.join(MODEL_DIR, MODEL_NAME);
 
+// TheBloke'un resmi GGUF bağlantısı (kararlı)
 const MODEL_URL =
-  "https://huggingface.co/tensorblock/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/Qwen2.5-0.5B-Instruct-Q2_K.gguf";
+  "https://huggingface.co/TheBloke/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-Q2_K.gguf";
 
 const SYSTEM_PROMPT = `
 Senin adın Yankı.
@@ -34,14 +36,14 @@ Kendini Qwen tabanlı yerel bir asistan olarak tanıtabilirsin.
 Tehlikeli, yasa dışı veya zarar verici taleplerde güvenli bir alternatif sun.
 `.trim();
 
-let runtime = null;
+let session = null;
 let ready = false;
 let startupError = null;
 
 app.use(express.json({ limit: "256kb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
-// ─── Model indirme (aynı) ───
+// ─── Model indirme (yönlendirmeleri takip eder) ───
 function requestWithRedirect(url, options = {}, redirectCount = 0) {
   return new Promise((resolve, reject) => {
     if (redirectCount > 8) {
@@ -49,7 +51,7 @@ function requestWithRedirect(url, options = {}, redirectCount = 0) {
       return;
     }
     const client = url.startsWith("https:") ? https : http;
-    const req = client.get(url, options, response => {
+    const req = client.get(url, options, (response) => {
       const status = response.statusCode || 0;
       if ([301, 302, 303, 307, 308].includes(status) && response.headers.location) {
         response.resume();
@@ -68,6 +70,7 @@ function requestWithRedirect(url, options = {}, redirectCount = 0) {
 async function downloadModel() {
   fs.mkdirSync(MODEL_DIR, { recursive: true });
 
+  // Dosya varsa ve boyutu 100MB'den büyükse atla
   if (fs.existsSync(MODEL_PATH) && fs.statSync(MODEL_PATH).size > 100 * 1024 * 1024) {
     console.log(`✅ Model hazır: ${MODEL_PATH}`);
     return;
@@ -76,16 +79,19 @@ async function downloadModel() {
   const partPath = `${MODEL_PATH}.part`;
   let downloaded = fs.existsSync(partPath) ? fs.statSync(partPath).size : 0;
 
-  console.log("⬇️ Qwen2.5 0.5B Q2_K modeli indiriliyor...");
+  console.log("⬇️ Qwen2.5 0.5B Q2_K modeli indiriliyor (TheBloke)...");
   if (downloaded > 0) {
     console.log(`↩️ İndirmeye devam ediliyor: ${(downloaded / 1024 / 1024).toFixed(1)} MB`);
   }
 
-  let response = await requestWithRedirect(
-    MODEL_URL,
-    downloaded > 0 ? { headers: { Range: `bytes=${downloaded}-` } } : {}
-  );
+  const headers = {};
+  if (downloaded > 0) {
+    headers.Range = `bytes=${downloaded}-`;
+  }
 
+  let response = await requestWithRedirect(MODEL_URL, { headers });
+
+  // Eğer sunucu Range'i desteklemiyorsa baştan indir
   if (downloaded > 0 && response.statusCode === 200) {
     response.resume();
     fs.rmSync(partPath, { force: true });
@@ -98,17 +104,14 @@ async function downloadModel() {
     throw new Error(`Model indirilemedi. HTTP ${response.statusCode}`);
   }
 
-  const remaining = Number(response.headers["content-length"] || 0);
-  const total = downloaded + remaining;
-  const file = fs.createWriteStream(partPath, {
-    flags: downloaded > 0 ? "a" : "w"
-  });
+  const total = downloaded + Number(response.headers["content-length"] || 0);
+  const file = fs.createWriteStream(partPath, { flags: downloaded > 0 ? "a" : "w" });
 
   let received = downloaded;
   let lastPrinted = 0;
 
   await new Promise((resolve, reject) => {
-    response.on("data", chunk => {
+    response.on("data", (chunk) => {
       received += chunk.length;
       const now = Date.now();
       if (now - lastPrinted > 1000) {
@@ -136,12 +139,16 @@ async function downloadModel() {
   console.log("✅ Model indirme tamamlandı.");
 }
 
-// ─── Model yükleme (DonutRuntime) ───
+// ─── Model yükleme (node-llama-cpp) ───
 async function loadModel() {
   try {
-    console.log("🧠 Model yükleniyor (bu 10-20 saniye sürebilir)...");
-    runtime = new DonutRuntime();
-    await runtime.loadModel(MODEL_PATH);
+    console.log("🧠 Model yükleniyor (bu 15-30 saniye sürebilir)...");
+    const model = new LlamaModel({
+      modelPath: MODEL_PATH,
+      gpuLayers: 0, // CPU'da çalıştır (Render'da GPU yok)
+    });
+    const context = new LlamaContext({ model });
+    session = new LlamaChatSession({ context });
     ready = true;
     console.log("✅ Yankı modeli cevap vermeye hazır.");
   } catch (err) {
@@ -156,13 +163,13 @@ async function loadModel() {
 app.get("/api/status", (_req, res) => {
   res.json({
     ready,
-    model: "Qwen2.5 0.5B Q2_K (DonutRuntime)",
+    model: "Qwen2.5 0.5B Q2_K (node-llama-cpp)",
     error: startupError,
   });
 });
 
 app.post("/api/chat", async (req, res) => {
-  if (!ready || !runtime) {
+  if (!ready || !session) {
     return res.status(503).json({
       error: startupError || "Yankı henüz hazırlanıyor.",
     });
@@ -173,34 +180,24 @@ app.post("/api/chat", async (req, res) => {
     return res.status(400).json({ error: "messages dizisi gönderin." });
   }
 
-  // Son 6 mesajı al ve temizle
+  // Son 6 mesajı al, temizle
   messages = messages
     .slice(-6)
-    .filter(m => m && ["user", "assistant"].includes(m.role))
-    .map(m => ({
+    .filter((m) => m && ["user", "assistant"].includes(m.role))
+    .map((m) => ({
       role: m.role,
       content: String(m.content || "").slice(0, 1500),
     }))
-    .filter(m => m.content.trim());
+    .filter((m) => m.content.trim());
 
   if (!messages.length || messages[messages.length - 1].role !== "user") {
     return res.status(400).json({ error: "Geçerli bir kullanıcı mesajı gönder." });
   }
 
-  // System prompt'u başa ekle
-  const chatHistory = [
-    { role: "system", content: SYSTEM_PROMPT },
-    ...messages,
-  ];
-
-  // Konuşmayı metin haline getir (DonutRuntime prompt olarak alır)
-  const prompt = chatHistory
-    .map(m => `${m.role}: ${m.content}`)
-    .join("\n") + "\nassistant:";
+  const chatHistory = [{ role: "system", content: SYSTEM_PROMPT }, ...messages];
 
   try {
-    const response = await runtime.generate({
-      prompt,
+    const response = await session.prompt(chatHistory, {
       maxTokens: MAX_TOKENS,
       temperature: 0.7,
       topP: 0.9,

@@ -2,14 +2,14 @@
   "name": "yankiai",
   "version": "1.0.0",
   "type": "module",
-  "description": "YankıAI – Yerel 0.5B model ile sohbet asistanı",
+  "description": "YankıAI – Yerel 0.5B model ile sohbet asistanı (node-llama-cpp)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
     "express": "^4.18.2",
-    "@uncharted-ai/donut-runtime": "^0.1.0"
+    "node-llama-cpp": "^3.0.0"
   },
   "engines": {
     "node": ">=18"
