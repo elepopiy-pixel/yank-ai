@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 "use strict";
 
 const express = require("express");
@@ -13,16 +14,17 @@ const WEB_PORT = Number(process.env.PORT || 3000);
 const LLAMA_PORT = Number(process.env.LLAMA_PORT || 8080);
 const LLAMA_HOST = "127.0.0.1";
 
-const CONTEXT_SIZE = Number(process.env.CONTEXT_SIZE || 256);
+const CONTEXT_SIZE = Number(process.env.CONTEXT_SIZE || 512);   // 0.5B için biraz daha büyük olabilir
 const THREADS = Number(process.env.THREADS || 2);
-const MAX_TOKENS = Number(process.env.MAX_TOKENS || 128);
+const MAX_TOKENS = Number(process.env.MAX_TOKENS || 256);
 
 const MODEL_DIR = path.join(__dirname, "models");
-const MODEL_NAME = "qwen2.5-0.5b-instruct-Q2_K.gguf";
+const MODEL_NAME = "qwen2.5-0.5b-instruct-Q2_K.gguf";   // 0.5B model
 const MODEL_PATH = path.join(MODEL_DIR, MODEL_NAME);
 
-// TinyLlama 1.1B Chat v1.0, Q2_K GGUF.
+// TheBloke'dan Qwen2.5-0.5B-Instruct Q2_K
 const MODEL_URL =
+  process.env.MODEL_URL ||
   "https://huggingface.co/TheBloke/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-Q2_K.gguf?download=true";
 
 const SYSTEM_PROMPT = `
@@ -31,8 +33,7 @@ YankıAI adlı Türkçe odaklı, deneysel ve yerel bir yapay zekâ asistanısın
 Öncelikle Türkçe cevap ver. Kullanıcı başka bir dil isterse o dili kullanabilirsin.
 Cevapların samimi, açık, kısa ve faydalı olsun.
 Bilmediğin bir şeyi uydurma; emin olmadığını açıkça söyle.
-Kendini TinyLlama tabanlı yerel bir asistan olarak tanıtabilirsin.
-"Türkçe için sıfırdan eğitildim" deme; temel model TinyLlama'dır.
+Kendini Qwen tabanlı yerel bir asistan olarak tanıtabilirsin.
 Tehlikeli, yasa dışı veya zarar verici taleplerde güvenli bir alternatif sun.
 `.trim();
 
@@ -53,11 +54,9 @@ function requestWithRedirect(url, options = {}, redirectCount = 0) {
       reject(new Error("Çok fazla yönlendirme oluştu."));
       return;
     }
-
     const client = url.startsWith("https:") ? https : http;
     const req = client.get(url, options, response => {
       const status = response.statusCode || 0;
-
       if ([301, 302, 303, 307, 308].includes(status) && response.headers.location) {
         response.resume();
         const nextUrl = new URL(response.headers.location, url).toString();
@@ -66,10 +65,8 @@ function requestWithRedirect(url, options = {}, redirectCount = 0) {
           .catch(reject);
         return;
       }
-
       resolve(response);
     });
-
     req.on("error", reject);
   });
 }
@@ -85,7 +82,7 @@ async function downloadModel() {
   const partPath = `${MODEL_PATH}.part`;
   let downloaded = fs.existsSync(partPath) ? fs.statSync(partPath).size : 0;
 
-  console.log("⬇️ TinyLlama Q2_K modeli indiriliyor...");
+  console.log("⬇️ Qwen2.5 0.5B Q2_K modeli indiriliyor...");
   if (downloaded > 0) {
     console.log(`↩️ İndirmeye devam ediliyor: ${(downloaded / 1024 / 1024).toFixed(1)} MB`);
   }
@@ -95,7 +92,6 @@ async function downloadModel() {
     downloaded > 0 ? { headers: { Range: `bytes=${downloaded}-` } } : {}
   );
 
-  // Sunucu Range isteğini kabul etmediyse dosyayı baştan indir.
   if (downloaded > 0 && response.statusCode === 200) {
     response.resume();
     fs.rmSync(partPath, { force: true });
@@ -121,7 +117,6 @@ async function downloadModel() {
     response.on("data", chunk => {
       received += chunk.length;
       const now = Date.now();
-
       if (now - lastPrinted > 1000) {
         lastPrinted = now;
         const mb = (received / 1024 / 1024).toFixed(1);
@@ -130,7 +125,6 @@ async function downloadModel() {
         process.stdout.write(`\r📦 ${mb} / ${totalMb} MB (%${percent})`);
       }
     });
-
     response.pipe(file);
     file.on("finish", () => file.close(resolve));
     response.on("error", reject);
@@ -149,15 +143,9 @@ async function downloadModel() {
 }
 
 function findLlamaServer() {
-
-    if (process.env.LLAMA_SERVER_PATH)
-        return process.env.LLAMA_SERVER_PATH;
-
-    if (process.platform === "win32")
-        return path.join(__dirname,"bin","llama-server.exe");
-
-    return path.join(__dirname,"bin","llama-server");
-
+  if (process.env.LLAMA_SERVER_PATH) return process.env.LLAMA_SERVER_PATH;
+  if (process.platform === "win32") return path.join(__dirname, "bin", "llama-server.exe");
+  return path.join(__dirname, "bin", "llama-server");
 }
 
 async function waitForLlama() {
@@ -165,7 +153,6 @@ async function waitForLlama() {
     if (llamaProcess && llamaProcess.exitCode !== null) {
       throw new Error(`llama-server kapandı. Çıkış kodu: ${llamaProcess.exitCode}`);
     }
-
     try {
       const response = await fetch(`http://${LLAMA_HOST}:${LLAMA_PORT}/health`);
       if (response.ok) {
@@ -174,17 +161,13 @@ async function waitForLlama() {
         return;
       }
     } catch (_) {}
-
     await sleep(500);
   }
-
   throw new Error("llama-server zamanında hazır olmadı.");
 }
 
 async function startLlamaServer() {
-  const binDir = path.join(__dirname, "bin");
-  const executable = path.join(binDir, "llama-server");
-
+  const executable = findLlamaServer();
   const args = [
     "-m", MODEL_PATH,
     "--host", LLAMA_HOST,
@@ -199,15 +182,14 @@ async function startLlamaServer() {
 
   console.log(`🧠 Başlatılıyor: ${executable} ${args.join(" ")}`);
 
-  // Kütüphane yolunu bin/ dizini olarak ayarla
   const env = { ...process.env };
-  env.LD_LIBRARY_PATH = binDir + (env.LD_LIBRARY_PATH ? ':' + env.LD_LIBRARY_PATH : '');
+  env.LD_LIBRARY_PATH = path.join(__dirname, "bin") + (env.LD_LIBRARY_PATH ? ':' + env.LD_LIBRARY_PATH : '');
 
   llamaProcess = spawn(executable, args, {
-    cwd: binDir,               // Çalışma dizini bin/
+    cwd: path.join(__dirname, "bin"),
     windowsHide: true,
     stdio: ["ignore", "pipe", "pipe"],
-    env: env                   // Güncel LD_LIBRARY_PATH ile
+    env: env
   });
 
   llamaProcess.stdout.on("data", data => {
@@ -239,7 +221,6 @@ async function startLlamaServer() {
 
 function cleanMessages(input) {
   if (!Array.isArray(input)) return [];
-
   return input
     .slice(-6)
     .filter(item => item && ["user", "assistant"].includes(item.role))
@@ -253,7 +234,7 @@ function cleanMessages(input) {
 app.get("/api/status", (_req, res) => {
   res.json({
     ready: llamaReady,
-    model: "TinyLlama 1.1B Chat Q2_K",
+    model: "Qwen2.5 0.5B Q2_K",
     error: startupError
   });
 });

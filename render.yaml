@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: yankiai
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: LLAMA_PORT
+        value: 8080
+      - key: CONTEXT_SIZE
+        value: 512
+      - key: THREADS
+        value: 2
+      - key: MAX_TOKENS
+        value: 256
+    disk:
+      name: models
+      mountPath: /opt/render/project/src/models
+      sizeGB: 1

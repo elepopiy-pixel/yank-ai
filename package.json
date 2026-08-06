@@ -1,17 +1,16 @@
 {
   "name": "yankiai",
   "version": "1.0.0",
-  "private": true,
-  "description": "TinyLlama Q2_K ile çalışan hafif Türkçe sohbet arayüzü",
+  "description": "YankıAI – Yerel 0.5B model ile sohbet asistanı",
   "main": "server.js",
   "scripts": {
-    "build": "bash render-build.sh",
-    "start": "node server.js"
+    "start": "node server.js",
+    "postinstall": "bash build.sh"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
   },
   "engines": {
     "node": ">=18"
-  },
-  "dependencies": {
-    "express": "^4.21.2"
   }
 }
