@@ -1,7 +1,8 @@
 {
   "name": "yankiai",
   "version": "1.0.0",
-  "description": "YankıAI – Yerel 0.5B model ile sohbet asistanı (node-llama-cpp)",
+  "type": "module",
+  "description": "YankıAI – Yerel 0.5B model ile sohbet asistanı",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

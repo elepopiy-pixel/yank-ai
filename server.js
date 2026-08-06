@@ -1,12 +1,16 @@
 #!/usr/bin/env node
-"use strict";
 
-const express = require("express");
-const fs = require("fs");
-const path = require("path");
-const http = require("http");
-const https = require("https");
-const { LlamaModel, LlamaContext, LlamaChatSession } = require("node-llama-cpp");
+import express from "express";
+import fs from "fs";
+import path from "path";
+import http from "http";
+import https from "https";
+import { fileURLToPath } from "url";
+import { LlamaModel, LlamaContext, LlamaChatSession } from "node-llama-cpp";
+
+// __dirname'ı ESM'de kullanmak için
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
@@ -30,8 +34,6 @@ Kendini Qwen tabanlı yerel bir asistan olarak tanıtabilirsin.
 Tehlikeli, yasa dışı veya zarar verici taleplerde güvenli bir alternatif sun.
 `.trim();
 
-let model = null;
-let context = null;
 let session = null;
 let ready = false;
 let startupError = null;
@@ -39,11 +41,7 @@ let startupError = null;
 app.use(express.json({ limit: "256kb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-// ─── Model indirme (öncekiyle aynı, sadece küçük düzeltme) ───
+// ─── Model indirme (aynı) ───
 function requestWithRedirect(url, options = {}, redirectCount = 0) {
   return new Promise((resolve, reject) => {
     if (redirectCount > 8) {
@@ -138,15 +136,15 @@ async function downloadModel() {
   console.log("✅ Model indirme tamamlandı.");
 }
 
-// ─── Modeli yükle (node-llama-cpp) ───
+// ─── Model yükleme (node-llama-cpp) ───
 async function loadModel() {
   try {
     console.log("🧠 Model yükleniyor (bu 10-20 saniye sürebilir)...");
-    model = new LlamaModel({
+    const model = new LlamaModel({
       modelPath: MODEL_PATH,
       gpuLayers: 0, // CPU'da çalıştır (Render'da GPU yok)
     });
-    context = new LlamaContext({ model });
+    const context = new LlamaContext({ model });
     session = new LlamaChatSession({ context });
     ready = true;
     console.log("✅ Yankı modeli cevap vermeye hazır.");
@@ -161,14 +159,14 @@ async function loadModel() {
 // ─── API ───
 app.get("/api/status", (_req, res) => {
   res.json({
-    ready: ready,
+    ready,
     model: "Qwen2.5 0.5B Q2_K (node-llama-cpp)",
     error: startupError,
   });
 });
 
 app.post("/api/chat", async (req, res) => {
-  if (!ready) {
+  if (!ready || !session) {
     return res.status(503).json({
       error: startupError || "Yankı henüz hazırlanıyor.",
     });
