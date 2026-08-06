@@ -4,7 +4,7 @@
   "description": "YankıAI – Yerel 0.5B model ile sohbet asistanı",
   "main": "server.js",
   "scripts": {
-    "start": "bash start.sh & node server.js",
+    "start": "node server.js",
     "postinstall": "bash build.sh"
   },
   "dependencies": {

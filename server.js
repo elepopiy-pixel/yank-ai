@@ -14,15 +14,14 @@ const WEB_PORT = Number(process.env.PORT || 3000);
 const LLAMA_PORT = Number(process.env.LLAMA_PORT || 8080);
 const LLAMA_HOST = "127.0.0.1";
 
-const CONTEXT_SIZE = Number(process.env.CONTEXT_SIZE || 512);   // 0.5B için biraz daha büyük olabilir
+const CONTEXT_SIZE = Number(process.env.CONTEXT_SIZE || 512);
 const THREADS = Number(process.env.THREADS || 2);
 const MAX_TOKENS = Number(process.env.MAX_TOKENS || 256);
 
 const MODEL_DIR = path.join(__dirname, "models");
-const MODEL_NAME = "qwen2.5-0.5b-instruct-Q2_K.gguf";   // 0.5B model
+const MODEL_NAME = "qwen2.5-0.5b-instruct-Q2_K.gguf";
 const MODEL_PATH = path.join(MODEL_DIR, MODEL_NAME);
 
-// TheBloke'dan Qwen2.5-0.5B-Instruct Q2_K
 const MODEL_URL = "https://huggingface.co/tensorblock/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/Qwen2.5-0.5B-Instruct-Q2_K.gguf";
 
 const SYSTEM_PROMPT = `
@@ -147,21 +146,37 @@ function findLlamaServer() {
 }
 
 async function waitForLlama() {
-  for (let attempt = 0; attempt < 120; attempt++) {
+  // Hem Log yakalamasını hem HTTP polling sürecini destekleyen çift mekanizmalı bekleme
+  const maxWaitMs = 180000; // Maksimum 3 dakika tolerate et (yavaş CPU'lar için)
+  const startTime = Date.now();
+
+  while (Date.now() - startTime < maxWaitMs) {
+    if (llamaReady) {
+      console.log("✅ Yankı modeli cevap vermeye hazır.");
+      return;
+    }
+
     if (llamaProcess && llamaProcess.exitCode !== null) {
       throw new Error(`llama-server kapandı. Çıkış kodu: ${llamaProcess.exitCode}`);
     }
+
     try {
-      const response = await fetch(`http://${LLAMA_HOST}:${LLAMA_PORT}/health`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 1000);
+      const response = await fetch(`http://${LLAMA_HOST}:${LLAMA_PORT}/health`, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
       if (response.ok) {
         llamaReady = true;
         console.log("✅ Yankı modeli cevap vermeye hazır.");
         return;
       }
     } catch (_) {}
-    await sleep(500);
+
+    await sleep(300);
   }
-  throw new Error("llama-server zamanında hazır olmadı.");
+
+  throw new Error("llama-server zamanında hazır olmadı (Timeout).");
 }
 
 async function startLlamaServer() {
@@ -171,36 +186,39 @@ async function startLlamaServer() {
     "-m", MODEL_PATH,
     "--host", LLAMA_HOST,
     "--port", String(LLAMA_PORT),
-    "--ctx-size", String(CONTEXT_SIZE),
-    "--threads", String(THREADS),
-    "--parallel", "1",
-    "--batch-size", "16",
-    "--ubatch-size", "8",
+    "-c", String(CONTEXT_SIZE),
+    "-t", String(THREADS),
     "--no-mmap"
   ];
 
   console.log(`🧠 Başlatılıyor: ${executable} ${args.join(" ")}`);
 
   const env = { ...process.env };
-  // Kütüphane yolunu bin/ dizini olarak ayarla
   env.LD_LIBRARY_PATH = binDir + (env.LD_LIBRARY_PATH ? ':' + env.LD_LIBRARY_PATH : '');
 
   llamaProcess = spawn(executable, args, {
-    cwd: binDir,               // Çalışma dizini bin/
+    cwd: binDir,
     windowsHide: true,
     stdio: ["ignore", "pipe", "pipe"],
-    env: env                   // Güncel LD_LIBRARY_PATH ile
+    env: env
   });
 
-  llamaProcess.stdout.on("data", data => {
-    const text = data.toString().trim();
-    if (text) console.log(`[llama] ${text}`);
-  });
+  const checkLogOutput = (data) => {
+    const text = data.toString();
+    if (text.trim()) console.log(`[llama] ${text.trim()}`);
+    
+    // Server'ın hazır olduğunu belirten standart logları yakala
+    if (
+      text.includes("HTTP server listening") || 
+      text.includes("main: server is listening") ||
+      text.includes("llama threadpool started")
+    ) {
+      llamaReady = true;
+    }
+  };
 
-  llamaProcess.stderr.on("data", data => {
-    const text = data.toString().trim();
-    if (text) console.log(`[llama] ${text}`);
-  });
+  llamaProcess.stdout.on("data", checkLogOutput);
+  llamaProcess.stderr.on("data", checkLogOutput);
 
   llamaProcess.on("error", error => {
     startupError = error.message;
@@ -299,7 +317,7 @@ async function main() {
 
   try {
     await downloadModel();
-    //await startLlamaServer();
+    await startLlamaServer();
   } catch (error) {
     startupError = error.message;
     llamaReady = false;
