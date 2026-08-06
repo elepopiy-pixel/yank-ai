@@ -5,6 +5,7 @@
   "description": "TinyLlama Q2_K ile çalışan hafif Türkçe sohbet arayüzü",
   "main": "server.js",
   "scripts": {
+    "build": "bash render-build.sh",
     "start": "node server.js"
   },
   "engines": {
