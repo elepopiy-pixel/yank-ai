@@ -19,7 +19,7 @@ const THREADS = Number(process.env.THREADS || 2);
 const MAX_TOKENS = Number(process.env.MAX_TOKENS || 256);
 
 const MODEL_DIR = path.join(__dirname, "models");
-const MODEL_NAME = "qwen2.5-0.5b-instruct-Q2_K.gguf";
+const MODEL_NAME = "Qwen2.5-0.5B-Instruct-Q2_K.gguf"; // Büyük harfle doğru dosya adı
 const MODEL_PATH = path.join(MODEL_DIR, MODEL_NAME);
 
 const MODEL_URL = "https://huggingface.co/tensorblock/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/Qwen2.5-0.5B-Instruct-Q2_K.gguf";
@@ -146,8 +146,7 @@ function findLlamaServer() {
 }
 
 async function waitForLlama() {
-  // Hem Log yakalamasını hem HTTP polling sürecini destekleyen çift mekanizmalı bekleme
-  const maxWaitMs = 180000; // Maksimum 3 dakika tolerate et (yavaş CPU'lar için)
+  const maxWaitMs = 180000; // 3 dakika
   const startTime = Date.now();
 
   while (Date.now() - startTime < maxWaitMs) {
@@ -165,7 +164,6 @@ async function waitForLlama() {
       const timeoutId = setTimeout(() => controller.abort(), 1000);
       const response = await fetch(`http://${LLAMA_HOST}:${LLAMA_PORT}/health`, { signal: controller.signal });
       clearTimeout(timeoutId);
-
       if (response.ok) {
         llamaReady = true;
         console.log("✅ Yankı modeli cevap vermeye hazır.");
@@ -187,8 +185,8 @@ async function startLlamaServer() {
     "--host", LLAMA_HOST,
     "--port", String(LLAMA_PORT),
     "-c", String(CONTEXT_SIZE),
-    "-t", String(THREADS),
-    "--no-mmap"
+    "-t", String(THREADS)
+    // --no-mmap kaldırıldı, isteğe bağlı
   ];
 
   console.log(`🧠 Başlatılıyor: ${executable} ${args.join(" ")}`);
@@ -206,12 +204,11 @@ async function startLlamaServer() {
   const checkLogOutput = (data) => {
     const text = data.toString();
     if (text.trim()) console.log(`[llama] ${text.trim()}`);
-    
-    // Server'ın hazır olduğunu belirten standart logları yakala
+    // Server'ın hazır olduğunu belirten logları yakala
     if (
-      text.includes("HTTP server listening") || 
-      text.includes("main: server is listening") ||
-      text.includes("llama threadpool started")
+      text.includes("HTTP server listening") ||
+      text.includes("listening on") ||
+      text.includes("main: server is listening")
     ) {
       llamaReady = true;
     }
