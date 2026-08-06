@@ -224,8 +224,8 @@ Yankı:`;
     console.log("🧠 Model düşünüyor...");
     console.time("generate");
     const response = await session.prompt(prompt, {
-      maxTokens: MAX_TOKENS,
-      temperature: 0.7,
+      maxTokens: 32,
+      temperature: 0.2,
       topP: 0.9,
     });
 
