@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <title>YankıAI</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="YankıAI ana sayfa">
+      <span class="logo">Y</span>
+      <span>YankıAI</span>
+    </a>
+    <div id="status" class="status">
+      <span class="status-dot"></span>
+      <span class="status-text">Hazırlanıyor</span>
+    </div>
+  </header>
+
+  <main class="app-shell">
+    <section id="welcome" class="welcome">
+      <div class="hero-logo">Y</div>
+      <h1>Merhaba, ben Yankı.</h1>
+      <p>Türkçe iletişime odaklanan deneysel ve yerel yapay zekâ asistanı.</p>
+
+      <div class="suggestions">
+        <button data-prompt="Bana kısa ve komik bir hikâye anlat.">
+          <strong>Hikâye anlat</strong>
+          <span>Kısa ve eğlenceli</span>
+        </button>
+        <button data-prompt="Bugün öğrenebileceğim ilginç bir bilgi söyle.">
+          <strong>Bir şey öğret</strong>
+          <span>Yeni bir bilgi keşfet</span>
+        </button>
+        <button data-prompt="JavaScript öğrenmeye nereden başlamalıyım?">
+          <strong>Kodlama yardımı</strong>
+          <span>Basitçe açıkla</span>
+        </button>
+      </div>
+    </section>
+
+    <section id="messages" class="messages" aria-live="polite"></section>
+  </main>
+
+  <footer class="composer-wrap">
+    <form id="chat-form" class="composer">
+      <textarea
+        id="message-input"
+        rows="1"
+        maxlength="1500"
+        placeholder="Yankı'ya bir şey sor..."
+        aria-label="Mesaj"
+      ></textarea>
+      <button id="send-button" type="submit" aria-label="Gönder">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 19V5M6.5 10.5 12 5l5.5 5.5"/>
+        </svg>
+      </button>
+    </form>
+    <p class="note">TinyLlama tabanlı deneysel model yanlış cevaplar verebilir.</p>
+  </footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,331 @@
+:root {
+  color-scheme: light;
+  --bg: #ffffff;
+  --soft: #f5f6f8;
+  --soft-2: #eceef2;
+  --text: #18191c;
+  --muted: #70747d;
+  --border: #e3e5e9;
+  --accent: #111214;
+  --ok: #20a464;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+}
+
+button, textarea {
+  font: inherit;
+}
+
+.topbar {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 10;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  background: rgba(255,255,255,.9);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(14px);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: inherit;
+  font-size: 18px;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.logo, .hero-logo {
+  display: grid;
+  place-items: center;
+  background: var(--accent);
+  color: white;
+  font-weight: 800;
+}
+
+.logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 99px;
+  background: #c1c4ca;
+}
+
+.status.ready .status-dot {
+  background: var(--ok);
+  box-shadow: 0 0 0 4px rgba(32,164,100,.12);
+}
+
+.status.error .status-dot {
+  background: #dc4c4c;
+}
+
+.app-shell {
+  width: min(820px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 105px 0 190px;
+}
+
+.welcome {
+  min-height: calc(100vh - 280px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.hero-logo {
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  margin-bottom: 18px;
+  font-size: 25px;
+  box-shadow: 0 12px 30px rgba(0,0,0,.14);
+}
+
+.welcome h1 {
+  margin: 0;
+  font-size: clamp(29px, 5vw, 43px);
+  letter-spacing: -1.5px;
+}
+
+.welcome > p {
+  max-width: 520px;
+  margin: 13px 0 30px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.suggestions {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.suggestions button {
+  min-height: 112px;
+  padding: 17px;
+  text-align: left;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 17px;
+  cursor: pointer;
+  transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+
+.suggestions button:hover {
+  transform: translateY(-2px);
+  border-color: #c6c9cf;
+  box-shadow: 0 8px 24px rgba(0,0,0,.06);
+}
+
+.suggestions strong,
+.suggestions span {
+  display: block;
+}
+
+.suggestions strong {
+  margin-bottom: 7px;
+  font-size: 14px;
+}
+
+.suggestions span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.messages {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.message {
+  display: flex;
+  gap: 12px;
+  animation: show .2s ease;
+}
+
+.message.user {
+  justify-content: flex-end;
+}
+
+.avatar {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: var(--accent);
+  color: white;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.bubble {
+  max-width: min(680px, 85%);
+  padding: 13px 16px;
+  border-radius: 18px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.user .bubble {
+  background: var(--soft);
+  border-bottom-right-radius: 6px;
+}
+
+.assistant .bubble {
+  padding-top: 6px;
+  background: transparent;
+}
+
+.typing {
+  color: var(--muted);
+}
+
+.composer-wrap {
+  position: fixed;
+  inset: auto 0 0;
+  z-index: 9;
+  padding: 20px 16px 13px;
+  background: linear-gradient(transparent, white 28%);
+}
+
+.composer {
+  width: min(820px, 100%);
+  min-height: 62px;
+  margin: 0 auto;
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 10px 10px 10px 18px;
+  background: white;
+  border: 1px solid #d8dbe0;
+  border-radius: 22px;
+  box-shadow: 0 12px 38px rgba(0,0,0,.10);
+}
+
+.composer:focus-within {
+  border-color: #a9adb5;
+}
+
+textarea {
+  width: 100%;
+  max-height: 150px;
+  resize: none;
+  padding: 10px 0;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  outline: 0;
+  line-height: 1.45;
+}
+
+textarea::placeholder {
+  color: #999da5;
+}
+
+#send-button {
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 14px;
+  background: var(--accent);
+  color: white;
+  cursor: pointer;
+}
+
+#send-button:disabled {
+  opacity: .35;
+  cursor: not-allowed;
+}
+
+#send-button svg {
+  width: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.note {
+  margin: 8px 0 0;
+  text-align: center;
+  color: #999da5;
+  font-size: 11px;
+}
+
+.hidden {
+  display: none;
+}
+
+@keyframes show {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 680px) {
+  .topbar {
+    padding: 0 16px;
+  }
+
+  .suggestions {
+    grid-template-columns: 1fr;
+  }
+
+  .suggestions button {
+    min-height: auto;
+  }
+
+  .welcome {
+    justify-content: flex-start;
+    padding-top: 75px;
+  }
+
+  .app-shell {
+    padding-top: 90px;
+  }
+
+  .bubble {
+    max-width: 90%;
+  }
+}
