@@ -1,43 +1,34 @@
 #!/usr/bin/env bash
 set -e
 
-echo "⬇️ llama.cpp indiriliyor..."
-wget -nv https://github.com/ggml-org/llama.cpp/releases/download/b10290/llama-b10290-bin-ubuntu-x64.tar.gz
+echo "🛠️  llama.cpp kaynak kodundan derleniyor..."
 
-echo "📦 Arşiv açılıyor..."
-tar -xzf llama-b10290-bin-ubuntu-x64.tar.gz
+# 1. Depoyu klonla
+git clone --depth 1 https://github.com/ggml-org/llama.cpp.git
 
+# 2. Derleme klasörüne gir ve derlemeyi başlat
+cd llama.cpp
+mkdir -p build && cd build
+
+# 3. CMake ile yapılandır (CPU için optimize edilmiş)
+cmake .. -DLLAMA_CUBLAS=OFF -DLLAMA_METAL=OFF -DCMAKE_BUILD_TYPE=Release
+
+# 4. Derlemeyi yap (sadece llama-server ve gerekli kütüphaneler)
+make -j$(nproc) llama-server
+
+# 5. Ana proje klasörüne dön ve binary'leri kopyala
+cd ../../
 mkdir -p bin
+cp llama.cpp/build/bin/llama-server bin/
+cp llama.cpp/build/lib*.so* bin/ 2>/dev/null || true
 
-# Tüm llama dosyalarını bin/ altına taşı (server.js, package.json vs. dokunma)
-mv llama* lib* ggml* mtmd* bin/ 2>/dev/null || true
-
+# 6. Gerekli kütüphane bağlantılarını oluştur
 cd bin
-
-# Kopyala (link değil!) – linker için çalışacaktır
-if [ -f libggml.so.0.18.1 ]; then
-    cp -p libggml.so.0.18.1 libggml.so.0
-    cp -p libggml.so.0.18.1 libggml-base.so.0
-    cp -p libggml.so.0.18.1 libggml-cpu.so.0
-fi
-
-if [ -f libllama-common.so.0.0.10290 ]; then
-    cp -p libllama-common.so.0.0.10290 libllama-common.so.0
-fi
-
-if [ -f libllama.so.0.0.10290 ]; then
-    cp -p libllama.so.0.0.10290 libllama.so.0
-fi
-
-if [ -f libmtmd.so.0.0.10290 ]; then
-    cp -p libmtmd.so.0.0.10290 libmtmd.so.0
-fi
-
+ln -sf libggml.so libggml.so.0 2>/dev/null || true
+ln -sf libllama.so libllama.so.0 2>/dev/null || true
 cd ..
 
+# 7. Çalıştırma izni ver
 chmod +x bin/llama-server
-chmod +x bin/llama-* 2>/dev/null || true
 
-echo "✅ Hazır."
-echo "📁 bin/ içeriği (kütüphaneler):"
-ls -la bin/ | grep -E "\.so"
+echo "✅ llama-server başarıyla derlendi ve hazır."
