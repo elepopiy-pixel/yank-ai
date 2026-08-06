@@ -5,7 +5,7 @@ const fs = require("fs");
 const path = require("path");
 const http = require("http");
 const https = require("https");
-const { spawn } = require("child_process");
+const { spawn, spawnSync } = require("child_process");
 
 const app = express();
 
@@ -149,27 +149,92 @@ async function downloadModel() {
   console.log("✅ Model indirme tamamlandı.");
 }
 
+const { spawnSync } = require("child_process");
+
 function findLlamaServer() {
-  const isWindows = process.platform === "win32";
-  const executable = isWindows ? "llama-server.exe" : "llama-server";
+    const isWindows = process.platform === "win32";
+    const exe = isWindows ? "llama-server.exe" : "llama-server";
 
-  const candidates = [
-    process.env.LLAMA_SERVER_PATH,
-    path.join(__dirname, "bin", executable),
-    path.join(__dirname, executable),
-    executable
-  ].filter(Boolean);
+    const finalPath = path.join(__dirname, "bin", exe);
 
-  for (const candidate of candidates) {
-    if (candidate === executable || fs.existsSync(candidate)) {
-      return candidate;
+    if (fs.existsSync(finalPath)) {
+        return finalPath;
     }
-  }
 
-  throw new Error(
-    `${executable} bulunamadı. llama.cpp paketindeki ${executable} dosyasını ` +
-    `"${path.join(__dirname, "bin")}" klasörüne koy.`
-  );
+    console.log("📥 llama.cpp indiriliyor...");
+
+    if (!fs.existsSync("llama.cpp")) {
+        spawnSync("git", [
+            "clone",
+            "https://github.com/ggml-org/llama.cpp.git"
+        ], { stdio: "inherit" });
+    }
+
+    console.log("🔨 llama.cpp derleniyor...");
+
+    spawnSync("cmake", [
+        "-B",
+        "build"
+    ], {
+        cwd: "llama.cpp",
+        stdio: "inherit"
+    });
+
+    spawnSync("cmake", [
+        "--build",
+        "build",
+        "--config",
+        "Release"
+    ], {
+        cwd: "llama.cpp",
+        stdio: "inherit"
+    });
+
+    let built;
+
+    if (isWindows) {
+
+        built = path.join(
+            "llama.cpp",
+            "build",
+            "bin",
+            "Release",
+            "llama-server.exe"
+        );
+
+        if (!fs.existsSync(built)) {
+            built = path.join(
+                "llama.cpp",
+                "build",
+                "bin",
+                "llama-server.exe"
+            );
+        }
+
+    } else {
+
+        built = path.join(
+            "llama.cpp",
+            "build",
+            "bin",
+            "llama-server"
+        );
+
+    }
+
+    if (!fs.existsSync(built)) {
+        throw new Error("llama-server derlenemedi.");
+    }
+
+    fs.mkdirSync(path.join(__dirname, "bin"), {
+        recursive: true
+    });
+
+    fs.copyFileSync(built, finalPath);
+
+    console.log("✅ llama-server hazır.");
+
+    return finalPath;
 }
 
 async function waitForLlama() {
