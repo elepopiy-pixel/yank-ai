@@ -23,7 +23,7 @@ const MODEL_NAME = "qwen2.5-0.5b-instruct-Q2_K.gguf";   // 0.5B model
 const MODEL_PATH = path.join(MODEL_DIR, MODEL_NAME);
 
 // TheBloke'dan Qwen2.5-0.5B-Instruct Q2_K
-const MODEL_URL = "https://huggingface.co/tensorblock/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-Q2_K.gguf";
+const MODEL_URL = "https://huggingface.co/tensorblock/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/Qwen2.5-0.5B-Instruct-Q2_K.gguf";
 
 const SYSTEM_PROMPT = `
 Senin adın Yankı.
