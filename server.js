@@ -180,13 +180,28 @@ async function waitForLlama() {
 async function startLlamaServer() {
   const executable = findLlamaServer();
   const binDir = path.join(__dirname, "bin");
+
+  // ⭐ Çalıştırma iznini düzelt
+  try {
+    if (fs.existsSync(executable)) {
+      fs.chmodSync(executable, 0o755);
+      console.log(`✅ Çalıştırma izni verildi: ${executable}`);
+    } else {
+      console.error(`❌ Dosya bulunamadı: ${executable}`);
+      throw new Error(`llama-server dosyası mevcut değil: ${executable}`);
+    }
+  } catch (error) {
+    console.error(`⚠️ İzin hatası: ${error.message}`);
+    throw error;
+  }
+
   const args = [
     "-m", MODEL_PATH,
     "--host", LLAMA_HOST,
     "--port", String(LLAMA_PORT),
     "-c", String(CONTEXT_SIZE),
-    "-t", String(THREADS)
-    // --no-mmap kaldırıldı, isteğe bağlı
+    "-t", String(THREADS),
+    "--no-mmap"
   ];
 
   console.log(`🧠 Başlatılıyor: ${executable} ${args.join(" ")}`);
