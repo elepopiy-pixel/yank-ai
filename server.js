@@ -183,7 +183,8 @@ async function waitForLlama() {
 }
 
 async function startLlamaServer() {
-  const executable = findLlamaServer();
+  const binDir = path.join(__dirname, "bin");
+  const executable = path.join(binDir, "llama-server");
 
   const args = [
     "-m", MODEL_PATH,
@@ -199,17 +200,11 @@ async function startLlamaServer() {
 
   console.log(`🧠 Başlatılıyor: ${executable} ${args.join(" ")}`);
 
-  // === LD_LIBRARY_PATH ayarı ===
-  const env = { ...process.env };
-  const binPath = path.join(__dirname, "bin");
-  env.LD_LIBRARY_PATH = binPath + (env.LD_LIBRARY_PATH ? ':' + env.LD_LIBRARY_PATH : '');
-  // ============================
-
   llamaProcess = spawn(executable, args, {
-    cwd: __dirname,
+    cwd: binDir,  // Çalışma dizini bin/ – kütüphaneler aynı yerde
     windowsHide: true,
     stdio: ["ignore", "pipe", "pipe"],
-    env: env
+    env: process.env
   });
 
   llamaProcess.stdout.on("data", data => {
