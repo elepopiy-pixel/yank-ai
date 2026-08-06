@@ -6,8 +6,9 @@ import path from "path";
 import http from "http";
 import https from "https";
 import { fileURLToPath } from "url";
-import { LlamaModel, LlamaChatSession } from "node-llama-cpp";
+import { DonutRuntime } from "@uncharted-ai/donut-runtime";
 
+// __dirname'ı ESM'de kullanmak için
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -33,13 +34,14 @@ Kendini Qwen tabanlı yerel bir asistan olarak tanıtabilirsin.
 Tehlikeli, yasa dışı veya zarar verici taleplerde güvenli bir alternatif sun.
 `.trim();
 
-let session = null;
+let runtime = null;
 let ready = false;
 let startupError = null;
 
 app.use(express.json({ limit: "256kb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
+// ─── Model indirme (aynı) ───
 function requestWithRedirect(url, options = {}, redirectCount = 0) {
   return new Promise((resolve, reject) => {
     if (redirectCount > 8) {
@@ -134,48 +136,33 @@ async function downloadModel() {
   console.log("✅ Model indirme tamamlandı.");
 }
 
+// ─── Model yükleme (DonutRuntime) ───
 async function loadModel() {
   try {
     console.log("🧠 Model yükleniyor (bu 10-20 saniye sürebilir)...");
-    
-    // Doğru kullanım: initialize ile
-    const model = new LlamaModel({
-      modelPath: MODEL_PATH,
-      gpuLayers: 0
-    });
-    
-    // Modelin yüklenmesini bekle
-    await model.initialize();
-    
-    // Context oluştur
-    const context = await model.createContext();
-    
-    // Session oluştur
-    session = new LlamaChatSession({
-      context: context
-    });
-    
+    runtime = new DonutRuntime();
+    await runtime.loadModel(MODEL_PATH);
     ready = true;
     console.log("✅ Yankı modeli cevap vermeye hazır.");
   } catch (err) {
     startupError = err.message;
     ready = false;
     console.error("❌ Model yüklenirken hata:", err.message);
-    console.error(err.stack);
     throw err;
   }
 }
 
+// ─── API ───
 app.get("/api/status", (_req, res) => {
   res.json({
     ready,
-    model: "Qwen2.5 0.5B Q2_K (node-llama-cpp)",
+    model: "Qwen2.5 0.5B Q2_K (DonutRuntime)",
     error: startupError,
   });
 });
 
 app.post("/api/chat", async (req, res) => {
-  if (!ready || !session) {
+  if (!ready || !runtime) {
     return res.status(503).json({
       error: startupError || "Yankı henüz hazırlanıyor.",
     });
@@ -186,6 +173,7 @@ app.post("/api/chat", async (req, res) => {
     return res.status(400).json({ error: "messages dizisi gönderin." });
   }
 
+  // Son 6 mesajı al ve temizle
   messages = messages
     .slice(-6)
     .filter(m => m && ["user", "assistant"].includes(m.role))
@@ -199,15 +187,20 @@ app.post("/api/chat", async (req, res) => {
     return res.status(400).json({ error: "Geçerli bir kullanıcı mesajı gönder." });
   }
 
-  // System prompt'u ekle
+  // System prompt'u başa ekle
   const chatHistory = [
     { role: "system", content: SYSTEM_PROMPT },
     ...messages,
   ];
 
+  // Konuşmayı metin haline getir (DonutRuntime prompt olarak alır)
+  const prompt = chatHistory
+    .map(m => `${m.role}: ${m.content}`)
+    .join("\n") + "\nassistant:";
+
   try {
-    // Doğru prompt metodu
-    const response = await session.prompt(chatHistory, {
+    const response = await runtime.generate({
+      prompt,
       maxTokens: MAX_TOKENS,
       temperature: 0.7,
       topP: 0.9,
@@ -220,6 +213,7 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
+// ─── Ana fonksiyon ───
 async function main() {
   app.listen(WEB_PORT, "0.0.0.0", () => {
     console.log(`🌐 YankıAI: http://localhost:${WEB_PORT}`);
