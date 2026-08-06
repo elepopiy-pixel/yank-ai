@@ -150,7 +150,6 @@ async function loadModel() {
     const context = new LlamaContext({
         model,
         contextSize: 1024,
-        batchSize: 128
     });
     session = new LlamaChatSession({ context });
     ready = true;
