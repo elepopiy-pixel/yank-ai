@@ -329,7 +329,7 @@ async function main() {
 
   try {
     await downloadModel();
-    await startLlamaServer();
+    //await startLlamaServer();
   } catch (error) {
     startupError = error.message;
     llamaReady = false;
