@@ -6,9 +6,10 @@ echo "🛠️  llama-server kaynaktan derleniyor (hafif mod)..."
 # Gerekli klasörleri oluştur
 mkdir -p bin models
 
-# 1. Eğer llama.cpp yoksa klonla (sadece son commit)
-if [ ! -d "llama.cpp" ]; then
+# 1. Eğer llama.cpp yoksa veya CMakeLists.txt eksikse tekrar klonla
+if [ ! -d "llama.cpp" ] || [ ! -f "llama.cpp/CMakeLists.txt" ]; then
     echo "📦 llama.cpp deposu klonlanıyor..."
+    rm -rf llama.cpp  # Varsa sil, temiz başla
     git clone --depth 1 https://github.com/ggml-org/llama.cpp.git
 fi
 
@@ -17,7 +18,7 @@ cd llama.cpp
 # 2. Derleme klasörü
 mkdir -p build && cd build
 
-# 3. Sadece llama-server için CMake yapılandırması (diğer hedefler kapalı)
+# 3. Sadece llama-server için CMake yapılandırması
 echo "⚙️  CMake yapılandırması yapılıyor..."
 cmake .. \
     -DLLAMA_CUBLAS=OFF \
